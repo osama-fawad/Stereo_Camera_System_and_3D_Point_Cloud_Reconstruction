@@ -8,7 +8,7 @@ import numpy as np  # Needed to concatenate images
 # Example Output: /dev/video0  /dev/video2  /dev/video4 (where video4 is the laptop's webcam)
 
 # Check available camera indices
-for i in range(5):  # Check up to 5 possible camera indices
+for i in range(10):  # Check up to 5 possible camera indices
     cap = cv2.VideoCapture(i)
     if cap.isOpened():
         print(f"\nCamera {i} is available -->")
@@ -43,14 +43,14 @@ for i in range(5):  # Check up to 5 possible camera indices
 ### STEP 2: OPEN BOTH CAMERAS AND DISPLAY SIDE-BY-SIDE OUTPUT ###
 
 # Open the two external cameras
-cap_left = cv2.VideoCapture(2)  # First webcam
-cap_right = cv2.VideoCapture(4)  # Second webcam
+cap_left = cv2.VideoCapture(6)  # First webcam
+cap_right = cv2.VideoCapture(2)  # Second webcam
 
 # Set resolution (optional but recommended for consistency)
-cap_left.set(3, 640)  # Width
-cap_left.set(4, 480)  # Height
-cap_right.set(3, 640)
-cap_right.set(4, 480)
+cap_left.set(3, 1920)  # Width
+cap_left.set(4, 1080)  # Height
+cap_right.set(3, 1920)
+cap_right.set(4, 1080)
 
 # Ensure cameras are opened successfully
 if not cap_left.isOpened() or not cap_right.isOpened():
@@ -71,12 +71,19 @@ while True:
     if not retL or not retR:
         print("Error: Could not read frames.")
         break
+    
+    scale_percent = 50  # Percent of original size
 
-    # Concatenate left and right images side by side
-    combined_frame = np.hstack((frameL, frameR))  # Horizontally stack images
+    width = int(frameL.shape[1] * scale_percent / 100)
+    height = int(frameL.shape[0] * scale_percent / 100)
 
-    # Display the combined frame
-    cv2.imshow("Stereo Camera Output (Left | Right)", combined_frame)
+    displayL = cv2.resize(frameL, (width, height))
+    displayR = cv2.resize(frameR, (width, height))
+
+    # Combine smaller versions for display
+    combined_display = np.hstack((displayL, displayR))
+
+    cv2.imshow("Stereo Camera Output (Left | Right)", combined_display)
 
     # Wait for key press
     key = cv2.waitKey(1) & 0xFF
@@ -97,6 +104,4 @@ cv2.destroyAllWindows()
 
 
 # Measurements
-# Right Cam to Robot = 107 cm 
-# Left Cam to Robot = 103 cm
-# Distance between the two cameras = 18 cm
+# 32 cm baseline - new webcams
