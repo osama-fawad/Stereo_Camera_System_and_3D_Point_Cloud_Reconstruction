@@ -206,7 +206,7 @@ These values are useful for sparse reconstruction and understanding stereo camer
   ```
 
 - Final 3D result:
-  <img src="outputs/output_3d_point_cloud_screenshot.png" width="500"/>
+  <img src="output_3d_point_cloud_screenshot.png" width="600"/>
 
 ---
 
