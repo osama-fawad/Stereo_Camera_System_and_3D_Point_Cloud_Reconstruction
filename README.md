@@ -1,75 +1,237 @@
 # Stereo Vision: Dense 3D Reconstruction Using Dual Webcams
 
-This project implements a full stereo vision pipeline using two parallel webcams to generate a dense 3D reconstruction of a scene. It uses OpenCV-based techniques for calibration, rectification, disparity map generation, and triangulation to reconstruct a 3D point cloud.
+This project implements a full stereo vision pipeline using two parallel webcams to generate a **dense 3D reconstruction** of a scene using OpenCV. It covers image capture, camera calibration, stereo geometry estimation, image rectification, disparity map generation, feature matching (optional), and triangulation to reconstruct a dense 3D point cloud.
 
 ---
 
-## 📸 Setup Overview
+## 🔧 Ideal Stereo Setup & Theory
 
-- **Camera Configuration**: Two identical webcams placed in parallel at the same height and nearly the same angle, separated by a fixed **baseline of 32 cm**.
-- **Image Resolution**: 1920x1080 (maximum supported by the webcams).
-- **Sample Setup Photo**:  
-  ![Camera Setup](cameras_setup.jpg)
-
-
-
-## 🧪 Project Pipeline
-
-### 1. Camera Capture
-
-- Using `scripts/1_capture_multi_camera_images.py`, both webcams are initialized.
-- Streams from both cameras are shown side by side.
-- User can save synchronized stereo pairs to `calibration_photos/left/` and `right/` by pressing the `s` key.
-
-### 2. Calibration
-
-Performed in the main notebook `4-Stereo_Vision_Dense_3D_Reconstruction_FULL.ipynb`:
-- **Checkerboard Detection**: Uses (7, 9) inner corners.
-- **Preprocessing**: Images enhanced via sharpening, CLAHE, and denoising to improve corner detection.
-- **Intrinsic Calibration**: Each camera calibrated individually.
-- **Stereo Calibration**: Determines the spatial relation (R, T) between cameras. Also outputs:
-  - Essential (E) and Fundamental (F) matrices
-  - Rectification transforms (R1, R2), projection matrices (P1, P2), disparity-to-depth matrix (Q)
-- All results are saved in `output/stereo_calibration_parameters.npz`.
-
-### 3. Rectification
-
-- Stereo image pair from `extra/` is rectified using saved calibration parameters.
-- Horizontal epipolar alignment verified using overlaid lines.
-- Vertical disparity checked: consistent ~5 pixels (ideally 0).
-
-### 4. Disparity Map (Dense)
-
-- **Method Used**: StereoBM + WLS Filtering (Edge-preserving).
-- **Notes**: StereoBM is simpler and less computationally expensive, though not as accurate as SGBM.
-- The disparity map is not perfect but good enough for depth estimation.
-
-### 5. (Optional) Feature Matching (Sparse)
-
-- **Features**: SIFT descriptors used.
-- **Matches**: ~1100 good matches found.
-- This approach is useful for sparse reconstruction, but for dense 3D we moved to disparity-based triangulation.
-
-### 6. Triangulation & Dense Point Cloud
-
-- Disparity map used with the Q matrix to generate a **dense 3D point cloud**.
-- Visualized using matplotlib.
-- Final result:  
-  ![Point Cloud Result](output_3d_point_cloud_screenshot.png)
+- **Stereo vision** enables depth perception by using two cameras placed side-by-side.
+- **Key Conditions**:
+  - Both cameras should be **parallel**, placed at the **same height**, and have **identical resolution**.
+  - Use a fixed **baseline** (32 cm used here).
+  - Ensure good lighting and rigid camera placement.
+  - Cameras used here capture at **1920×1080 resolution**.
+- Baseline photo:  
+  <img src="cameras_setup.jpg" width="500"/>
 
 ---
 
-## 🖼 Sample Test Image Used
+## 🖼 Test Image Used
 
-This is the test image pair rectified and used for disparity:
+This stereo image pair is used in rectification, disparity, and triangulation:
 
-![Test Image](extra/left_48.jpg)
+<img src="extra/left_48.jpg" width="500"/>
+
+---
+
+## 📁 Project Structure
+
+```
+calibration_photos/
+├── left/       # Left checkerboard images
+└── right/      # Right checkerboard images
+
+scripts/
+└── 1_capture_multi_camera_images.py
+
+output/
+├── stereo_calibration_parameters.npz
+├── calibration_preprocessing.png
+├── calibration_corner_detections_in_both_cameras.png
+└── feature_matching_sift.png
+
+extra/
+└── left_48.jpg / right_48.jpg   # Test stereo pair
+
+4-Stereo_Vision_Dense_3D_Reconstruction_FULL.ipynb  # Main pipeline
+Stereo_Camera_Project_Report_Draft.pdf              # 📄 Project Report
+```
 
 ---
 
 ## 📦 Dependencies
 
-Make sure to install `opencv-contrib-python`:
+Install all requirements with:
 
 ```bash
-pip install opencv-contrib-python
+pip install opencv-contrib-python matplotlib numpy
+```
+
+---
+
+## 🧪 Stereo Vision Pipeline (Step-by-Step)
+
+Each step below corresponds to a section in the notebook `4-Stereo_Vision_Dense_3D_Reconstruction_FULL.ipynb`.
+
+---
+
+### 1️⃣ Image Capture
+
+- Captures synchronized stereo images from two webcams using:
+  ```python
+  cv2.VideoCapture(index)
+  ```
+
+- Captured frames are saved to:
+  - `calibration_photos/left/`
+  - `calibration_photos/right/`
+
+Script used: `scripts/1_capture_multi_camera_images.py`
+
+---
+
+### 2️⃣ Calibration
+
+- **Checkerboard Grid**: 7×9 inner corners
+- **Image Enhancement** before corner detection:
+  <img src="output/calibration_preprocessing.png" width="500"/>
+
+- Uses:
+  ```python
+  cv2.findChessboardCorners() + cv2.cornerSubPix()
+  ```
+
+- Corner detection visualization:
+  <img src="output/calibration_corner_detections_in_both_cameras.png" width="500"/>
+
+- **Intrinsic Calibration** for each camera:
+  ```python
+  cv2.calibrateCamera(...)
+  ```
+
+- Results:
+  - Left Reprojection Error: `0.90 px`
+  - Right Reprojection Error: `0.92 px`
+
+- **Stereo Calibration** for camera relationship:
+  ```python
+  cv2.stereoCalibrate(..., flags=cv2.CALIB_FIX_INTRINSIC)
+  ```
+
+- Outputs: `R`, `T`, `E`, `F`, `R1`, `R2`, `P1`, `P2`, `Q`, remap maps.
+
+🗂️ Saved in: `output/stereo_calibration_parameters.npz`
+
+---
+
+### 3️⃣ Stereo Geometry Estimation
+
+- **Purpose**: Compute relative pose (R, T) from essential matrix `E`
+- Uses:
+  ```python
+  cv2.findEssentialMat()
+  cv2.recoverPose()
+  ```
+
+- Outputs:
+  - **R_est**: Rotation matrix
+  - **T_est**: Translation vector
+  - **E**: Essential matrix (from correspondences)
+  - **F**: Fundamental matrix (pixel-based)
+
+These values are useful for sparse reconstruction and understanding stereo camera alignment.
+
+---
+
+### 4️⃣ Rectification
+
+- Aligns both images horizontally (epipolar alignment).
+- Uses:
+  ```python
+  cv2.stereoRectify()
+  cv2.initUndistortRectifyMap()
+  ```
+
+- Remaps images to common plane:
+  ```python
+  cv2.remap()
+  ```
+
+- Optional vertical disparity check showed ~5px difference (should ideally be 0).
+- Sample rectified result visualized with epipolar lines.
+
+---
+
+### 5️⃣ Disparity Map (Dense Depth)
+
+- Method Used: **StereoBM + WLS Filter**
+  ```python
+  cv2.StereoBM_create()
+  cv2.ximgproc.createDisparityWLSFilter()
+  ```
+
+- Filters disparity with smoothness & edge-aware enhancement.
+
+- Notes:
+  - Works better on **textured areas**.
+  - Performance depends on **baseline**, **lighting**, and **camera alignment**.
+
+---
+
+### 6️⃣ Feature Matching (Optional - Sparse)
+
+- Descriptor Used: **SIFT**
+  ```python
+  sift = cv2.SIFT_create()
+  ```
+
+- Matcher: Brute Force + Ratio Test
+  ```python
+  bf = cv2.BFMatcher()
+  bf.knnMatch(...)
+  ```
+
+- Result:
+  - Detected: `4236` keypoints in left, `4487` in right
+  - Good matches: `1008` after Lowe’s ratio test
+
+- Visualization:
+  <img src="output/feature_matching_sift.png" width="500"/>
+
+🔎 Sparse matching is useful for pose estimation and essential matrix computation.
+
+---
+
+### 7️⃣ Triangulation & Dense 3D Point Cloud
+
+- Converts disparity into 3D coordinates:
+  ```python
+  points_3D = cv2.reprojectImageTo3D(disparity_map, Q)
+  ```
+
+- Filters valid points (where disparity > 0)
+- Colors are extracted from left rectified image
+
+- Visualized with:
+  ```python
+  matplotlib.pyplot.scatter(..., c=colors)
+  ```
+
+- Final 3D result:
+  <img src="output/output_3d_point_cloud_screenshot.png" width="500"/>
+
+---
+
+## 🔄 Full Pipeline Summary
+
+| Step                      | Key Function / Method                   |
+|---------------------------|------------------------------------------|
+| Image Capture             | `cv2.VideoCapture()`                    |
+| Intrinsic Calibration     | `cv2.calibrateCamera()`                 |
+| Stereo Calibration        | `cv2.stereoCalibrate()`                |
+| Essential Matrix          | `cv2.findEssentialMat()`                |
+| Recover Pose              | `cv2.recoverPose()`                     |
+| Stereo Rectification      | `cv2.stereoRectify()`, `cv2.remap()`    |
+| Disparity (Dense)         | `cv2.StereoBM_create()` + WLS           |
+| Feature Matching (Sparse) | `cv2.SIFT_create()`, `BFMatcher()`      |
+| 3D Point Cloud            | `cv2.reprojectImageTo3D()`              |
+
+---
+
+## 📄 Project Report
+
+You can find the PDF write-up of this implementation here:
+📄 `Stereo_Camera_Project_Report_Draft.pdf`
+
+---
