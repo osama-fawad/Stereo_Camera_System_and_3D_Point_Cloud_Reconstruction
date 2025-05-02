@@ -68,10 +68,7 @@ Each step below corresponds to a section in the notebook `4-Stereo_Vision_Dense_
 
 ### 1️⃣ Image Capture
 
-- Captures synchronized stereo images from two webcams using:
-  ```python
-  cv2.VideoCapture(index)
-  ```
+- Captures synchronized stereo images from two webcams
 
 - Captured frames are saved to:
   - `calibration_photos/left/`
@@ -85,7 +82,7 @@ Script used: `scripts/1_capture_multi_camera_images.py`
 
 - **Checkerboard Grid**: 7×9 inner corners
 - **Image Enhancement** before corner detection:
-  <img src="output/calibration_preprocessing.png" width="500"/>
+  <img src="outputs/calibration_preprocessing.png" width="500"/>
 
 - Uses:
   ```python
@@ -93,7 +90,7 @@ Script used: `scripts/1_capture_multi_camera_images.py`
   ```
 
 - Corner detection visualization:
-  <img src="output/calibration_corner_detections_in_both_cameras.png" width="500"/>
+  <img src="outputs/calibration_corner_detections_in_both_cameras.png" width="500"/>
 
 - **Intrinsic Calibration** for each camera:
   ```python
@@ -111,7 +108,7 @@ Script used: `scripts/1_capture_multi_camera_images.py`
 
 - Outputs: `R`, `T`, `E`, `F`, `R1`, `R2`, `P1`, `P2`, `Q`, remap maps.
 
-🗂️ Saved in: `output/stereo_calibration_parameters.npz`
+🗂️ Saved in: `outputs/stereo_calibration_parameters.npz`
 
 ---
 
@@ -187,7 +184,7 @@ These values are useful for sparse reconstruction and understanding stereo camer
   - Good matches: `1008` after Lowe’s ratio test
 
 - Visualization:
-  <img src="output/feature_matching_sift.png" width="500"/>
+  <img src="outputs/feature_matching_sift.png" width="500"/>
 
 🔎 Sparse matching is useful for pose estimation and essential matrix computation.
 
@@ -209,7 +206,7 @@ These values are useful for sparse reconstruction and understanding stereo camer
   ```
 
 - Final 3D result:
-  <img src="output/output_3d_point_cloud_screenshot.png" width="500"/>
+  <img src="outputs/output_3d_point_cloud_screenshot.png" width="500"/>
 
 ---
 
